@@ -1,8 +1,8 @@
 import { gql } from "graphql-request";
 
 export const get_all_products = gql`
-query Products {
-  products { 
+query Products($pagination: PaginationArg) {
+  products(pagination: $pagination) { 
     images {
       url
     }

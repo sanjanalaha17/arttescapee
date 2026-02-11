@@ -11,6 +11,12 @@ export const GetAllProducts = () => {
     return useQuery({
         queryKey: ['get-all-products'],
         queryFn: () => {
+            const document = {
+                "pagination": {
+                    "page": 1,
+                    "pageSize": 20
+                }
+            }
             return graphqlClient.request(get_all_products)
         }
     })

@@ -4,12 +4,13 @@ import React from 'react'
 import FilterBar from '../components/FilterBar/FilterBar'
 import ProductCard from '../components/ProductCard/ProductCard'
 import { GetAllProducts } from '@/graphQl/Queries'
+import Loader from '../loader'
 
 const Page = () => {
-    const { data } = GetAllProducts()
+    const { data, isLoading } = GetAllProducts()
 
 
-    return (
+    return isLoading ? <Loader /> : (
         <div className='w-full px-10 max-sm:px-0'>
             <div className='py-10 max-sm:px-8'>
                 <p className='text-6xl font-secondary font-bold'>Collections</p>
@@ -31,6 +32,7 @@ const Page = () => {
 
             </div>
         </div>
+
     )
 }
 

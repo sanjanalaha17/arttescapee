@@ -3,8 +3,11 @@
 
 
 import Iconify from '@/app/components/Iconify/Iconify'
+import { CreateOrder } from '@/graphQl/Mutations'
 import { GetSpecificProduct } from '@/graphQl/Queries'
+import axios from 'axios'
 import { useRouter, useParams } from 'next/navigation'
+import Script from 'next/script'
 import React, { useEffect, useState } from 'react'
 
 interface productDataType {
@@ -41,14 +44,63 @@ const initValues: productDataType = {
 
 const ProductPage = () => {
 
+    const CreateOrderMuta = CreateOrder()
     const router = useRouter()
     const params = useParams()
     const slug = params.slug as string
+
+    const [order_amount, setOrder_Amount] = useState<number>(0)
+    const [quantity, setQuantity] = useState<number>(1)
 
     const { data, isLoading } = GetSpecificProduct(slug)
 
     const [productData, setProductData] = useState<productDataType>(initValues)
 
+    const handlePayment = async () => {
+
+        const { data, status } = await axios.post('/api/create-payment', {
+            order_amount,
+        })
+
+        const order = data;
+
+        const options = {
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            amount: order.amount * 100,
+            currency: order.currency,
+            name: "Arttescapee",
+            description: "Test Transaction",
+            order_id: order.id,
+            handler: function (response: any) {
+                CreateOrderMuta.mutate({
+                    product_sku: productData?.sku,
+                    product_slug: productData?.slug,
+                    order_amount: order_amount,
+                    quantity: quantity
+                })
+            },
+            prefill: {
+                name: "Test User",
+                email: "test@example.com",
+                contact: "9999999999",
+            },
+            theme: {
+                color: "#000000",
+            },
+        };
+
+        const razor = new (window as any).Razorpay(options);
+        razor.open();
+
+
+
+    };
+
+    useEffect(() => {
+        if (productData?.price) {
+            setOrder_Amount(productData.price * quantity)
+        }
+    }, [quantity, productData?.price])
 
     useEffect(() => {
         if (data && !isLoading) {
@@ -61,6 +113,7 @@ const ProductPage = () => {
                 specifications: data?.products[0]?.specifications,
                 slug: data?.products[0]?.slug,
             })
+            setOrder_Amount(data?.products[0]?.price)
         }
     }, [data, isLoading])
     return (
@@ -107,13 +160,19 @@ const ProductPage = () => {
                     <hr className='border-gray-200 my-6' />
                     <div className='w-full grid grid-cols-5 max-sm:grid-cols-1 gap-2'>
                         <div className='col-span-2 flex  justify-between gap-2 border border-neutral-900'>
-                            <button className='p-4 cursor-pointer hover:text-neutral-100  text-neutral-700  hover:bg-neutral-950'>
+                            <button onClick={() => {
+                                setQuantity((prevData) => prevData > 1 ? prevData - 1 : prevData)
+
+                            }} className='p-4 cursor-pointer hover:text-neutral-100  text-neutral-700  hover:bg-neutral-950'>
                                 <Iconify icon='tabler:minus' className='' />
                             </button>
                             <div className='p-4'>
-                                <p>2</p>
+                                <p>{quantity}</p>
                             </div>
-                            <button className='p-4 cursor-pointer text-neutral-700  hover:text-neutral-100 hover:bg-neutral-950'><Iconify icon='stash:plus-solid' className='' /></button>
+                            <button onClick={() => {
+                                setQuantity((prevData) => prevData < 10 ? prevData + 1 : prevData)
+
+                            }} className='p-4 cursor-pointer text-neutral-700  hover:text-neutral-100 hover:bg-neutral-950'><Iconify icon='stash:plus-solid' className='' /></button>
                         </div>
                         <div className='col-span-3'>
                             <button className='w-full p-4 flex items-center justify-center gap-2 cursor-pointer  text-neutral-100  hover:bg-neutral-800 bg-neutral-950'>
@@ -122,7 +181,10 @@ const ProductPage = () => {
                             </button>
                         </div>
                     </div>
-                    <button className='w-full mt-2 p-4 flex items-center justify-center gap-2 cursor-pointer  text-neutral-100  hover:bg-neutral-800 bg-neutral-950'>
+                    <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="beforeInteractive" />
+                    <button
+                        onClick={handlePayment}
+                        className='w-full mt-2 p-4 flex items-center justify-center gap-2 cursor-pointer  text-neutral-100  hover:bg-neutral-800 bg-neutral-950'>
                         Buy it Now
                     </button>
                     <div className='w-full border border-neutral-200 mt-6'>
